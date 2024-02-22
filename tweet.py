@@ -733,11 +733,13 @@ async def like_and_tweet(username: str, password: str,
     }
     if DEBUG:
         common_page_options["record_video_dir"] = "./result"
+    print("Start")
     async with async_playwright() as p:
         browser, page, can_continue, storage_state_file = await get_page(
             username=username, password=password, headed=headed,
             common_page_options=common_page_options, p=p
         )
+        print("can continue", can_continue)
         if not can_continue:
             return
         if await check_locked(page, username=username, password=password):
@@ -791,6 +793,7 @@ def run(username: str, password: str, tweets: list, headed: bool) -> None:
     -------
 
     """
+    print("rin")
     asyncio.run(like_and_tweet(username=username, password=password,
                                tweets=tweets, headed=headed))
 
