@@ -803,6 +803,7 @@ if __name__ == '__main__':
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=int(arg.workers))
     generate_result()
     # results = {}
+    print(credentials)
     for credential in credentials:
         pool.submit(
             run, credential[0], credential[1], contents, arg.headed is not True
