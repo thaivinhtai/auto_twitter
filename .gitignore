@@ -1,0 +1,17 @@
+result*.txt
+credentials-old.txt
+duncan.pem
+.venv/
+.DS_Store
+result*
+following-*
+credentials-*
+.idea/
+contents.txt
+followings.txt
+credentials.txt
+op-cat*
+.auth/
+media/
+temp/
+suspened.txt

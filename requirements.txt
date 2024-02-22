@@ -1,0 +1,11 @@
+altgraph==0.17.4
+greenlet==3.0.1
+importlib-metadata==7.0.1
+macholib==1.16.3
+packaging==23.2
+playwright==1.40.0
+pyee==11.0.1
+pyinstaller==6.3.0
+pyinstaller-hooks-contrib==2023.12
+typing_extensions==4.9.0
+zipp==3.17.0

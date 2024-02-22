@@ -1,0 +1,49 @@
+#!/bin/bash
+
+WORKSPACE_PATH="$( cd -- "$( dirname -- "$0" )" >/dev/null 2>&1 || exit 1 ; pwd -P )"
+
+BASE_URL="http:/127.0.0.1:9000"
+FOLLOWINGS_FILE="${BASE_URL}/followings/${FOLLOWINGS}"
+CREDENTIALS_FILE="${BASE_URL}/credentials/${CREDENTIALS}"
+MEDIA_FILE="${BASE_URL}/media/${MEDIA}"
+CONTENT_FILE="${BASE_URL}/content/${CONTENTS}"
+
+rm -rf result
+
+# debug
+rm -rf .auth
+
+rm -rf followings.txt
+curl -o followings.txt ${FOLLOWINGS_FILE}
+
+rm -rf contents.txt
+curl -o contents.txt ${CONTENT_FILE}
+
+rm -rf credentials.txt
+curl -o credentials.txt ${CREDENTIALS_FILE}
+
+rm -rf media media.zip
+rm -rf media
+curl -o media.zip ${MEDIA_FILE}
+unzip -j media.zip -d media
+
+# Create Python virtual environment and activate it
+# Since we run within a container so no need to create virtual environment
+echo "Create Python virtual environment and then activate"
+python3 -m venv ${WORKSPACE_PATH}/.sqa_venv
+source ${WORKSPACE_PATH}/.sqa_venv/bin/activate
+echo "Upgrade pip"
+pip3 install --upgrade pip
+
+# Install dependencies
+echo "Install requirement"
+pip3 install wheel
+pip3 install --upgrade -r ${WORKSPACE_PATH}/requirements.txt
+
+# Install Playwright
+echo "Install Playwright"
+playwright install
+
+# Run test
+echo "python ${WORKSPACE_PATH}/tweet.py --workers ${WORKERS}"
+python ${WORKSPACE_PATH}/tweet.py --workers ${WORKERS}
