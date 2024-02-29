@@ -11,6 +11,7 @@ import sys
 from typing import List
 import random
 import traceback
+import requests
 
 from json import loads, JSONDecodeError
 from os import mkdir, path, listdir, environ
@@ -48,6 +49,13 @@ LIMIT_DIR = f"{RESULT_DIR}/{CURRENT_TIME}-limit"
 DEFAULT_SCROLL_TIMES = 10
 
 DEBUG = str(environ.get('AUTO_TWEET_DEBUG')) == "1"
+# DEBUG = True
+TELEGRAM_API_TOKEN = str(environ.get('TELEGRAM_API_TOKEN'))
+# TELEGRAM_API_TOKEN = "6890344596:AAFXCmE94tP5eMxnWBwljGgMarBxC8nzB9Q"
+TELEGRAM_CHAT_ID = str(environ.get('TELEGRAM_CHAT_ID'))
+# TELEGRAM_CHAT_ID = "-1002077244517"
+POST_NUMBER = 10 if not environ.get('POST_NUMBER') \
+    else int(environ.get('POST_NUMBER'))
 
 
 class FailedToUploadMediaException(Exception):
@@ -68,13 +76,19 @@ def __get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Execution arguments')
     parser.add_argument('-t', '--tweet-file',
                         default='contents.txt',
-                        help='path to tweet content file.')
+                        help='path to tweet content file')
     parser.add_argument('-c', '--credential',
                         default='credentials.txt',
                         help='path to credential file')
-    parser.add_argument('-d', '--duration',
-                        default=50,
-                        help='Total time tu run for each thread (seconds)')
+    # parser.add_argument('-p', '--post-number',
+    #                     default=10,
+    #                     help='Total post to comment for each KOL')
+    # parser.add_argument('-t', '--telegram-token',
+    #                     default=None,
+    #                     help='Telegram API Token')
+    # parser.add_argument('-i', '--chat-id',
+    #                     default=None,
+    #                     help='Telegram chat ID')
     parser.add_argument('--headed', required=False,
                         action="store_true", help='run in headed mode',
                         default=False)
@@ -392,6 +406,9 @@ async def tweet(page: Page, tweets: List[str], username: str) -> (bool, str):
             result.write(
                 f'https://twitter.com/{username}/status/{post_id}\n'
             )
+            send_to_telegram(
+                f'https://twitter.com/{username}/status/{post_id}'
+            )
 
     return True, ""
 
@@ -655,7 +672,8 @@ async def browse_an_article(like: Locator, username: str,
         time.sleep(1)
 
     try:
-        await like.click(timeout=5000)
+        if await group_action.get_by_test_id('like').is_visible():
+            await like.click(timeout=5000)
     except PWTimeoutError:
         if DEBUG:
             print(username)
@@ -694,6 +712,61 @@ async def browse_articles(likes: List[Locator], username: str,
         scroll += 1
         likes = await page.get_by_test_id('like').all()
     return likes
+
+
+async def browse_tweets(username: str, page: Page, tweets: List[str]) -> None:
+    """
+
+    Parameters
+    ----------
+    username
+    page
+    tweets
+
+    Returns
+    -------
+
+    """
+    browsed_post = 0
+    time.sleep(5)
+    for each_tweet in await page.get_by_test_id('tweet').all():
+        if await each_tweet.get_by_test_id('like').is_visible():
+            like = each_tweet.get_by_test_id('like')
+        else:
+            like = each_tweet.get_by_test_id('unlike')
+        if await browse_an_article(like=like, username=username,
+                                   page=page, tweets=tweets):
+            wait_time = random.choice((3, 5, 6, 7, 8, 9))
+            time.sleep(wait_time)
+            browsed_post += 1
+        if browsed_post > POST_NUMBER:
+            return
+
+
+def send_to_telegram(message: str) -> None:
+    """
+
+    Parameters
+    ----------
+    message
+
+    Returns
+    -------
+
+    """
+    if not TELEGRAM_API_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Cannot send to telegram")
+        return
+
+    api_url = f'https://api.telegram.org/bot{TELEGRAM_API_TOKEN}/sendMessage'
+
+    try:
+        response = requests.post(
+            api_url, json={'chat_id': TELEGRAM_CHAT_ID, 'text': message}
+        )
+        print(response.text)
+    except Exception as e:
+        print(e)
 
 
 async def get_likes_when_first_loading(page: Page) -> List[Locator]:
@@ -735,6 +808,7 @@ async def like_and_tweet(username: str, password: str,
         common_page_options["record_video_dir"] = "./result"
     print("Start")
     async with async_playwright() as p:
+        print("start 1")
         browser, page, can_continue, storage_state_file = await get_page(
             username=username, password=password, headed=headed,
             common_page_options=common_page_options, p=p
@@ -757,13 +831,16 @@ async def like_and_tweet(username: str, password: str,
                     print(following)
 
                 await wait_for_load(await page.goto(following), page)
-                likes = await get_likes_when_first_loading(page)
+                # likes = await get_likes_when_first_loading(page)
 
-                while len(likes) > 0:
-                    likes = await browse_articles(
-                        likes=likes, username=username,
-                        page=page, tweets=tweets
-                    )
+                # while len(likes) > 0:
+                #     likes = await browse_articles(
+                #         likes=likes, username=username,
+                #         page=page, tweets=tweets
+                #     )
+                await browse_tweets(
+                    username=username, page=page, tweets=tweets
+                )
             except (PWTimeoutError, AssertionError):
                 print(username)
                 print(following)
@@ -793,7 +870,7 @@ def run(username: str, password: str, tweets: list, headed: bool) -> None:
     -------
 
     """
-    print("rin")
+    print("run")
     asyncio.run(like_and_tweet(username=username, password=password,
                                tweets=tweets, headed=headed))
 

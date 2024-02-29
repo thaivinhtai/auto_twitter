@@ -9,3 +9,5 @@ pyinstaller==6.3.0
 pyinstaller-hooks-contrib==2023.12
 typing_extensions==4.9.0
 zipp==3.17.0
+urllib3==1.26.6
+requests==2.31.0
